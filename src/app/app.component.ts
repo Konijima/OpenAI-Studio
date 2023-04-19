@@ -9,9 +9,9 @@ export class AppComponent {
   title = 'angular-frontend';
 
   constructor() {
-    // A simple test to see if the Test object is available
-    console.log(window.Test);
-    console.log(window.Test.hello());
-    console.log(window.Test.world());
+    console.log(window.OpenAI);
+
+    window.OpenAI.setApiKey('sk-************************************');
+    window.OpenAI.listModels().then((data) => console.log(data));
   }
 }
