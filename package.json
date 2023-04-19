@@ -1,9 +1,9 @@
 {
-  "name": "angular-electron-boilerplate",
-  "description": "A starter template that combines Angular and Electron for building cross-platform desktop apps.",
+  "name": "openai-studio",
+  "description": "An Angular and Electron-based desktop app for managing fine-tuning, files, and models. It provides a playground to test them, enabling OpenAI users to streamline their workflow and boost productivity.",
   "author": "Konijima",
   "main": "dist/main.js",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -53,8 +53,8 @@
     "typescript": "~4.9.4"
   },
   "build": {
-    "appId": "com.example.angular-electron-boilerplate",
-    "productName": "AngularElectronBoilerplate",
+    "appId": "com.konijima.openai-studio",
+    "productName": "OpenAI Studio",
     "directories": {
       "output": "dist-electron"
     },
