@@ -29,7 +29,7 @@ import {
  * The api key is not exposed to the renderer
  * @todo Load and save the API key securely
  */
-let apiKey: string | null = null;
+let apiKey: string | null = process.env.OPENAI_API_KEY ?? null;
 
 /**
  * The OpenAI API endpoint
@@ -160,6 +160,159 @@ export const OpenAI = {
           throw new Error(err?.response?.data?.error?.message ?? err.message);
         })
     ).data as OpenAICompletionResponse;
+  },
+
+  /**
+   * OpenAI: Creates a streamed completion for the provided prompt and parameters.
+   * @param {OpenAICompletionOptions} options The completion options
+   * @returns {Promise<OpenAICompletionResponse>} The completion response
+   * @throws {Error} If the API key is not set
+   * @throws {Error} If the model is not set
+   * @throws {Error} If the prompt is not set
+   */
+  async createStreamCompletion(
+    options: OpenAICompletionOptions,
+    onDataCallback: (data: string) => void
+  ) {
+    if (!apiKey) {
+      throw new Error('API key is not set');
+    }
+    if (!options.model) {
+      throw new Error('Model is not set');
+    }
+    if (!options.prompt) {
+      throw new Error('Prompt is not set');
+    }
+
+    const data = {
+      stream: true,
+      model: options.model,
+      prompt: options.prompt,
+      suffix: options.suffix ?? undefined,
+      max_tokens: options.max_tokens ?? 16,
+      temperature: options.temperature ?? 1,
+      top_p: options.top_p ?? 1,
+      n: 1,
+      logprobs: options.logprobs ?? undefined,
+      echo: options.echo ?? false,
+      stop: options.stop ?? undefined,
+      presence_penalty: options.presence_penalty ?? 0,
+      frequency_penalty: options.frequency_penalty ?? 0,
+      best_of: options.best_of ?? 1,
+      logit_bias: options.logit_bias ?? undefined,
+      user: options.user ?? undefined,
+    };
+
+    const response = await fetch(`${openAIEndpoint}/completions`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (response.status !== 200)
+      throw new Error((await response.json()).error.message);
+
+    let result = '';
+
+    const reader = response.body
+      ?.pipeThrough(new TextDecoderStream())
+      .getReader();
+    if (!reader) throw new Error('Invalid stream');
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const arr = value.split('\n');
+      for (let i = 0; i < arr.length; i++) {
+        const data = arr[i];
+        if (data.length === 0 || data.startsWith(':')) continue; // ignore empty message and sse comment message
+        if (data === 'data: [DONE]') {
+          break;
+        }
+        const json = JSON.parse(data.substring(6));
+        onDataCallback(json.choices[0].text);
+        result += json.choices[0].text;
+      }
+    }
+
+    return result;
+  },
+
+  /**
+   * OpenAI: Creates a model response for the given chat conversation.
+   * @param {OpenAIChatCompletionOptions} options The completion options
+   * @param {Function} onDataCallback The callback function to handle the streamed data
+   * @returns {Promise<OpenAIChatCompletionResponse>} The completion response
+   * @throws {Error} If the API key is not set
+   * @throws {Error} If the model is not set
+   * @throws {Error} If the messages is not set or empty
+   */
+  async createStreamChatCompletion(
+    options: OpenAIChatCompletionOptions,
+    onDataCallback: (data: string) => void
+  ) {
+    if (!apiKey) {
+      throw new Error('API key is not set');
+    }
+    if (!options.model) {
+      throw new Error('Model is not set');
+    }
+    if (!options.messages || options.messages.length === 0) {
+      throw new Error('Messages is not set or is empty');
+    }
+
+    const data = {
+      stream: true,
+      model: options.model,
+      messages: options.messages,
+      temperature: options.temperature ?? 1,
+      top_p: options.top_p ?? 1,
+      n: options.n ?? 1,
+      stop: options.stop ?? undefined,
+      max_tokens: options.max_tokens ?? Infinity,
+      presence_penalty: options.presence_penalty ?? 0,
+      frequency_penalty: options.frequency_penalty ?? 0,
+      logit_bias: options.logit_bias ?? undefined,
+      user: options.user ?? undefined,
+    };
+
+    const response = await fetch(`${openAIEndpoint}/chat/completions`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (response.status !== 200)
+      throw new Error((await response.json()).error.message);
+
+    let result = '';
+
+    const reader = response.body
+      ?.pipeThrough(new TextDecoderStream())
+      .getReader();
+    if (!reader) throw new Error('Invalid stream');
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      const arr = value.split('\n');
+      for (let i = 0; i < arr.length; i++) {
+        const data = arr[i];
+        if (data.length === 0 || data.startsWith(':')) continue; // ignore empty message and sse comment message
+        if (data === 'data: [DONE]') {
+          break;
+        }
+        const json = JSON.parse(data.substring(6));
+        if (json.choices[0].delta.content) {
+          onDataCallback(json.choices[0].delta.content);
+          result += json.choices[0].delta.content;
+        }
+      }
+    }
+
+    return result;
   },
 
   /**
