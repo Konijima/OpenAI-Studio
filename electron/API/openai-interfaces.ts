@@ -62,7 +62,7 @@ export interface OpenAIHyperParameters {
  */
 export interface OpenAIBaseFile {
   id: string;
-  object: string;
+  object: 'file';
   bytes: number;
   created_at: number;
   filename: string;
@@ -91,6 +91,31 @@ export interface OpenAITrainingFile extends OpenAIBaseFile {
 }
 
 /**
+ * OpenAI: Fine-tune interface
+ */
+export interface OpenAIFineTune {
+  id: string;
+  object: 'fine-tune';
+  created_at: number;
+  model: string;
+  events: OpenAIFineTuneEvent[];
+  fine_tuning_model: string;
+  hyperparams: OpenAIHyperParameters;
+  organization_id: string;
+  result_files: OpenAIResultFile[];
+  status:
+    | 'queued'
+    | 'training'
+    | 'failed'
+    | 'succeeded'
+    | 'canceled'
+    | 'timed_out';
+  validation_files: OpenAIValidationFile[];
+  training_files: OpenAITrainingFile[];
+  updated_at: number;
+}
+
+/**
  * OpenAI: List model response interface
  */
 export interface OpenAIListModelResponse {
@@ -108,17 +133,16 @@ export interface OpenAIRetrieveModelResponse extends OpenAIModel {}
  */
 export interface OpenAICompletionResponse {
   id: string;
-  object: string;
+  object: 'text_completion';
   created_at: number;
   model: string;
   choices: {
     finish_reason: string;
     index: number;
-    logprobs: {
+    logprobs?: {
       token_logprobs: number[];
       top_logprobs: number[];
     };
-    object: string;
     text: string;
   }[];
   usage: OpenAITokenUsage;
@@ -276,7 +300,7 @@ export interface OpenAIChatCompletionOptions {
  */
 export interface OpenAIChatCompletionResponse {
   id: string;
-  object: string;
+  object: 'chat.completion';
   created_at: number;
   choices: {
     index: number;
@@ -342,7 +366,7 @@ export interface OpenAIEditOptions {
  * OpenAI: Edit response interface
  */
 export interface OpenAIEditResponse {
-  object: string;
+  object: 'edit';
   created_at: number;
   choices: {
     index: number;
@@ -355,28 +379,14 @@ export interface OpenAIEditResponse {
  * OpenAI: List files response interface
  */
 export interface OpenAIListFilesResponse {
-  data: {
-    id: string;
-    object: string;
-    bytes: number;
-    created_at: number;
-    filename: string;
-    purpose: string;
-  };
-  object: string;
+  data: OpenAIBaseFile[];
+  object: 'list';
 }
 
 /**
  * OpenAI: Upload file response interface
  */
-export interface OpenAIUploadFileResponse {
-  id: string;
-  object: string;
-  bytes: number;
-  created_at: number;
-  filename: string;
-  purpose: string;
-}
+export interface OpenAIUploadFileResponse extends OpenAIBaseFile {}
 
 /**
  * OpenAI: Delete file response interface
@@ -390,14 +400,7 @@ export interface OpenAIDeleteFileResponse {
 /**
  * OpenAI: Retrieve file response interface
  */
-export interface OpenAIRetrieveFileResponse {
-  id: string;
-  object: string;
-  bytes: number;
-  created_at: number;
-  filename: string;
-  purpose: string;
-}
+export interface OpenAIRetrieveFileResponse extends OpenAIBaseFile {}
 
 /**
  * OpenAI: Create fine-tune options interface
@@ -483,104 +486,25 @@ export interface OpenAIFineTuningOptions {
 /**
  * OpenAI: Create fine-tune response interface
  */
-export interface OpenAICreateFineTuneResponse {
-  id: string;
-  object: string;
-  created_at: number;
-  model: string;
-  events: OpenAIFineTuneEvent[];
-  fine_tuning_model: string;
-  hyperparams: OpenAIHyperParameters;
-  organization_id: string;
-  result_files: OpenAIResultFile[];
-  status:
-    | 'queued'
-    | 'training'
-    | 'failed'
-    | 'succeeded'
-    | 'canceled'
-    | 'timed_out';
-  validation_files: OpenAIValidationFile[];
-  training_files: OpenAITrainingFile[];
-  updated_at: number;
-}
+export interface OpenAICreateFineTuneResponse extends OpenAIFineTune {}
 
 /**
  * OpenAI: List fine-tunes response interface
  */
 export interface OpenAIListFineTunesResponse {
   object: 'list';
-  data: {
-    id: string;
-    object: string;
-    model: string;
-    created_at: number;
-    fine_tuned_model: string;
-    hyperparams: OpenAIHyperParameters;
-    organization_id: string;
-    result_files: OpenAIResultFile[];
-    status:
-      | 'queued'
-      | 'training'
-      | 'failed'
-      | 'succeeded'
-      | 'canceled'
-      | 'timed_out';
-    validation_files: OpenAIValidationFile[];
-    training_files: OpenAITrainingFile[];
-    updated_at: number;
-  }[];
+  data: OpenAIFineTune[];
 }
 
 /**
  * OpenAI: Retrieve fine-tune response interface
  */
-export interface OpenAIRetrieveFineTuneResponse {
-  id: string;
-  object: string;
-  model: string;
-  created_at: number;
-  events: OpenAIFineTuneEvent[];
-  fine_tuned_model: string;
-  hyperparams: OpenAIHyperParameters;
-  organization_id: string;
-  result_files: OpenAIResultFile[];
-  status:
-    | 'queued'
-    | 'training'
-    | 'failed'
-    | 'succeeded'
-    | 'canceled'
-    | 'timed_out';
-  validation_files: OpenAIValidationFile[];
-  training_files: OpenAITrainingFile[];
-  updated_at: number;
-}
+export interface OpenAIRetrieveFineTuneResponse extends OpenAIFineTune {}
 
 /**
  * OpenAI: Cancel fine-tune response interface
  */
-export interface OpenAICancelFineTuneResponse {
-  id: string;
-  object: string;
-  model: string;
-  created_at: number;
-  events: OpenAIFineTuneEvent[];
-  fine_tuned_model: string;
-  hyperparams: OpenAIHyperParameters;
-  organization_id: string;
-  result_files: OpenAIResultFile[];
-  status:
-    | 'queued'
-    | 'training'
-    | 'failed'
-    | 'succeeded'
-    | 'canceled'
-    | 'timed_out';
-  validation_files: OpenAIValidationFile[];
-  training_files: OpenAITrainingFile[];
-  updated_at: number;
-}
+export interface OpenAICancelFineTuneResponse extends OpenAIFineTune {}
 
 /**
  * OpenAI: List fine-tune events response interface
