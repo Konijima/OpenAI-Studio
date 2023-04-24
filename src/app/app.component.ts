@@ -1,64 +1,70 @@
-import { Component, NgZone } from '@angular/core';
-import { OpenAI } from './app.module';
-import { ModelsService } from './services/models.service';
-import { FineTunesService } from './services/fine-tunes.service';
-import { FilesService } from './services/files.service';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { filter, map } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css'],
+  styleUrls: ['./app.component.scss'],
 })
-export class AppComponent {
-  text: string = '';
+export class AppComponent implements OnInit {
+  title = 'OpenAI Studio';
 
-  constructor(
-    private zone: NgZone,
-    private modelService: ModelsService,
-    private fineTunesService: FineTunesService,
-    private filesService: FilesService
-  ) {
-    if (!OpenAI.isApiKeySet()) return;
+  menuItems = [
+    {
+      type: 'header',
+      icon: 'article',
+      name: 'Files',
+      link: ['/files'],
+    },
+    {
+      type: 'header',
+      icon: 'tune',
+      name: 'Fine-tunes',
+      link: ['/fine-tunes'],
+    },
+    {
+      type: 'header',
+      icon: 'model_training',
+      name: 'Models',
+      link: ['/models'],
+    },
+    {
+      type: 'header',
+      icon: 'play_arrow',
+      name: 'Playground',
+      link: ['/playground'],
+    },
+    {
+      type: 'footer',
+      icon: 'key',
+      name: 'API Key',
+      link: ['/api-key'],
+    },
+  ];
 
-    console.log(
-      'Fetching initial data...',
-      '[models]',
-      '[files]',
-      '[fine-tunes]'
-    );
-    Promise.allSettled([
-      this.modelService.fetchModels(),
-      this.filesService.fetchFiles(),
-      this.fineTunesService.fetchFineTunes(),
-    ]).then((results) => {
-      console.log(
-        'Initial Fetch Results:',
-        results.map((r) => r.status)
-      );
-    });
+  constructor(private router: Router, private activatedRoute: ActivatedRoute) {}
 
-    // testing: stream chat completion
-    OpenAI.createStreamChatCompletion(
-      {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a javascript developer.',
-          },
-          {
-            role: 'user',
-            content: 'Show me a tiny code snippet',
-          },
-        ],
-        max_tokens: 50,
-      },
-      (data) =>
-        this.zone.run(() => {
-          this.text += data;
-        })
-    )
-      .then((result) => console.log('Chat Stream Completed', result))
-      .catch((err) => console.error(err));
+  ngOnInit(): void {
+    this.router.events
+      .pipe(
+        filter((event) => event instanceof NavigationEnd),
+        map(() => this.activatedRoute)
+      )
+      .subscribe((route) => {
+        while (route.firstChild) {
+          route = route.firstChild;
+        }
+
+        route.data.subscribe((data) => {
+          const dynamicPart = route.snapshot.url
+            .slice(1)
+            .map((segment) => segment.path)
+            .join(' / ');
+          this.title =
+            (data['title'] ?? 'Unknown') +
+            (dynamicPart ? ' / ' + dynamicPart : '');
+        });
+      });
   }
 }

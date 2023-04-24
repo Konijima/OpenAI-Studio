@@ -2,6 +2,10 @@ import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as url from 'url';
 
+// Import core modules
+import './Core/file-system';
+import './Core/openai';
+
 // Load environment variables from .env file in development mode.
 if (process.env.NODE_ENV === 'development') {
   require('dotenv').config();
@@ -12,8 +16,11 @@ let win: BrowserWindow | null;
 // Create the browser window.
 function createWindow() {
   win = new BrowserWindow({
+    title: 'OpenAI Studio',
     width: 1200,
+    minWidth: 1200,
     height: 800,
+    minHeight: 800,
     webPreferences: {
       sandbox: false,
       nodeIntegration: false,

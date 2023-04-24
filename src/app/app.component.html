@@ -1,1 +1,28 @@
-{{ text }}
+
+<div class="navbar">
+    <h1>{{title}}</h1>
+</div>
+
+<div class="side-nav">
+    <ul class="header">
+        <ng-container *ngFor="let item of menuItems">
+            <li *ngIf="item.type === 'header'" [routerLink]="item.link" routerLinkActive="active">
+                <mat-icon>{{item.icon}}</mat-icon>
+                {{item.name}}
+            </li>
+        </ng-container>
+    </ul>
+    <div class="spacer"></div>
+    <ul class="footer">
+        <ng-container *ngFor="let item of menuItems">
+            <li *ngIf="item.type === 'footer'" [routerLink]="item.link" routerLinkActive="active">
+                <mat-icon>{{item.icon}}</mat-icon>
+                {{item.name}}
+            </li>
+        </ng-container>
+    </ul>
+</div>
+
+<div class="page-container">
+    <router-outlet></router-outlet>
+</div>

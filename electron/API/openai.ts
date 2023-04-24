@@ -25,11 +25,22 @@ import {
   OpenAIUploadFileResponse,
 } from './openai-interfaces';
 
+import { ipcRenderer } from 'electron';
+
 /**
  * The api key is not exposed to the renderer
- * @todo Load and save the API key securely
  */
 let apiKey: string | null = process.env.OPENAI_API_KEY ?? null;
+
+// read the encrypted api key
+ipcRenderer
+  .invoke('getApiKey')
+  .then((key) => {
+    apiKey = key;
+  })
+  .catch((err) => {
+    console.error(err);
+  });
 
 /**
  * The OpenAI API endpoint
@@ -58,11 +69,24 @@ export const OpenAI = {
   isApiKeySet: () => apiKey !== null,
 
   /**
+   * OpenAI: Gets the API key but replaces the middle characters with asterisks
+   */
+  getApiKey: () => {
+    if (apiKey) {
+      return `${apiKey.slice(0, 4)}${'*'.repeat(
+        apiKey.length - 8
+      )}${apiKey.slice(apiKey.length - 4)}`;
+    }
+    return null;
+  },
+
+  /**
    * OpenAI: Sets the API key
    * @param {string} key The API key
    */
   setApiKey: (key: string) => {
     apiKey = key;
+    ipcRenderer.invoke('saveApiKey', key);
   },
 
   /**
@@ -70,6 +94,7 @@ export const OpenAI = {
    */
   unsetApiKey: () => {
     apiKey = null;
+    ipcRenderer.invoke('saveApiKey', '');
   },
 
   /**
@@ -115,7 +140,7 @@ export const OpenAI = {
   },
 
   /**
-   * OpenAI: Creates a completion for the provided prompt and parameters.
+   * OpenAI: Creates a completion for the provided prompt.
    * @param {OpenAICompletionOptions} options The completion options
    * @returns {Promise<OpenAICompletionResponse>} The completion response
    * @throws {Error} If the API key is not set
@@ -163,9 +188,10 @@ export const OpenAI = {
   },
 
   /**
-   * OpenAI: Creates a streamed completion for the provided prompt and parameters.
+   * OpenAI: Creates a streamed completion for the provided prompt.
    * @param {OpenAICompletionOptions} options The completion options
-   * @returns {Promise<OpenAICompletionResponse>} The completion response
+   * @param {function} onDataCallback The callback function to call when data is received
+   * @returns {Promise<string>} The full completion text
    * @throws {Error} If the API key is not set
    * @throws {Error} If the model is not set
    * @throws {Error} If the prompt is not set
@@ -242,8 +268,52 @@ export const OpenAI = {
   /**
    * OpenAI: Creates a model response for the given chat conversation.
    * @param {OpenAIChatCompletionOptions} options The completion options
-   * @param {Function} onDataCallback The callback function to handle the streamed data
    * @returns {Promise<OpenAIChatCompletionResponse>} The completion response
+   * @throws {Error} If the API key is not set
+   * @throws {Error} If the model is not set
+   * @throws {Error} If the messages is not set or empty
+   */
+  async createChatCompletion(options: OpenAIChatCompletionOptions) {
+    if (!apiKey) {
+      throw new Error('API key is not set');
+    }
+    if (!options.model) {
+      throw new Error('Model is not set');
+    }
+    if (!options.messages || options.messages.length === 0) {
+      throw new Error('Messages is not set or is empty');
+    }
+
+    const data = {
+      model: options.model,
+      messages: options.messages,
+      temperature: options.temperature ?? 1,
+      top_p: options.top_p ?? 1,
+      n: options.n ?? 1,
+      stop: options.stop ?? undefined,
+      max_tokens: options.max_tokens ?? Infinity,
+      presence_penalty: options.presence_penalty ?? 0,
+      frequency_penalty: options.frequency_penalty ?? 0,
+      logit_bias: options.logit_bias ?? undefined,
+      user: options.user ?? undefined,
+    };
+
+    return (
+      await axios
+        .post(`${openAIEndpoint}/chat/completions`, data, {
+          headers: getHeaders(),
+        })
+        .catch((err) => {
+          throw new Error(err?.response?.data?.error?.message ?? err.message);
+        })
+    ).data as OpenAIChatCompletionResponse;
+  },
+
+  /**
+   * OpenAI: Creates a streamed chat completion for the provided messages.
+   * @param {OpenAIChatCompletionOptions} options The completion options
+   * @param {Function} onDataCallback The callback function to handle the streamed data
+   * @returns {Promise<string>} The full chat completion text
    * @throws {Error} If the API key is not set
    * @throws {Error} If the model is not set
    * @throws {Error} If the messages is not set or empty
@@ -316,51 +386,7 @@ export const OpenAI = {
   },
 
   /**
-   * OpenAI: Creates a model response for the given chat conversation.
-   * @param {OpenAIChatCompletionOptions} options The completion options
-   * @returns {Promise<OpenAIChatCompletionResponse>} The completion response
-   * @throws {Error} If the API key is not set
-   * @throws {Error} If the model is not set
-   * @throws {Error} If the messages is not set or empty
-   */
-  async createChatCompletion(options: OpenAIChatCompletionOptions) {
-    if (!apiKey) {
-      throw new Error('API key is not set');
-    }
-    if (!options.model) {
-      throw new Error('Model is not set');
-    }
-    if (!options.messages || options.messages.length === 0) {
-      throw new Error('Messages is not set or is empty');
-    }
-
-    const data = {
-      model: options.model,
-      messages: options.messages,
-      temperature: options.temperature ?? 1,
-      top_p: options.top_p ?? 1,
-      n: options.n ?? 1,
-      stop: options.stop ?? undefined,
-      max_tokens: options.max_tokens ?? Infinity,
-      presence_penalty: options.presence_penalty ?? 0,
-      frequency_penalty: options.frequency_penalty ?? 0,
-      logit_bias: options.logit_bias ?? undefined,
-      user: options.user ?? undefined,
-    };
-
-    return (
-      await axios
-        .post(`${openAIEndpoint}/chat/completions`, data, {
-          headers: getHeaders(),
-        })
-        .catch((err) => {
-          throw new Error(err?.response?.data?.error?.message ?? err.message);
-        })
-    ).data as OpenAIChatCompletionResponse;
-  },
-
-  /**
-   * OpenAI: Creates a new edit for the provided input, instruction, and parameters.
+   * OpenAI: Creates an edit for the provided input, instruction, and parameters.
    * @param {OpenAIEditOptions} options The edit options
    * @returns {Promise<OpenAIEditResponse>} The edit response
    * @throws {Error} If the API key is not set

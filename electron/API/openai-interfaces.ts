@@ -64,6 +64,7 @@ export interface OpenAIBaseFile {
   id: string;
   object: 'file';
   bytes: number;
+  status: 'uploaded' | 'failed' | 'processing' | 'processed';
   created_at: number;
   filename: string;
   purpose: string;

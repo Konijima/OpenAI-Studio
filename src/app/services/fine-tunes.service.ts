@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { OpenAI } from '../app.module';
+import { Injectable, NgZone } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -7,7 +7,15 @@ import { OpenAI } from '../app.module';
 export class FineTunesService {
   private fineTunes: OpenAIFineTune[] = [];
 
-  constructor() {}
+  /**
+   * Emits when the data is received
+   * - This is used to update the data in the table
+   */
+  public readonly onDataReceived = new BehaviorSubject<OpenAIFineTune[]>([]);
+
+  constructor(private zone: NgZone) {
+    this.fetchFineTunes();
+  }
 
   /**
    * Returns the list of fine-tunes
@@ -20,10 +28,24 @@ export class FineTunesService {
    * Fetches the list of fine-tunes from OpenAI
    */
   public async fetchFineTunes() {
-    return await OpenAI.listFineTunes()
-      .then((fineTunes) => (this.fineTunes = fineTunes.data))
+    return await window.OpenAI.listFineTunes()
+      .then((fineTunes) => {
+        this.zone.run(() => {
+          this.fineTunes = fineTunes.data;
+        });
+      })
       .finally(() => {
+        this.onDataReceived.next(this.fineTunes);
         return this.fineTunes;
       });
+  }
+
+  /**
+   * Fetches the fine-tune from OpenAI
+   * @param id The fine-tune id
+   * @returns The fine-tune
+   */
+  public async fetchFineTune(id: string) {
+    return await window.OpenAI.retrieveFineTune(id);
   }
 }

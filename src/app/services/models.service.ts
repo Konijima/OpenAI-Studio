@@ -1,5 +1,5 @@
-import { Injectable } from '@angular/core';
-import { OpenAI } from '../app.module';
+import { Injectable, NgZone } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -7,7 +7,15 @@ import { OpenAI } from '../app.module';
 export class ModelsService {
   private models: OpenAIModel[] = [];
 
-  constructor() {}
+  /**
+   * Emits when the data is received
+   * - This is used to update the data in the table
+   */
+  public readonly onDataReceived = new BehaviorSubject<OpenAIModel[]>([]);
+
+  constructor(private zone: NgZone) {
+    this.fetchModels();
+  }
 
   /**
    * Returns the list of models
@@ -20,10 +28,24 @@ export class ModelsService {
    * Fetches the list of models from OpenAI
    */
   public async fetchModels() {
-    return await OpenAI.listModels()
-      .then((models) => (this.models = models.data))
+    return await window.OpenAI.listModels()
+      .then((models) => {
+        this.zone.run(() => {
+          this.models = models.data;
+        });
+      })
       .finally(() => {
+        this.onDataReceived.next(this.models);
         return this.models;
       });
+  }
+
+  /**
+   * Fetches the model from OpenAI
+   * @param id The model id
+   * @returns The model
+   */
+  public async fetchModel(id: string) {
+    return await window.OpenAI.retrieveModel(id);
   }
 }

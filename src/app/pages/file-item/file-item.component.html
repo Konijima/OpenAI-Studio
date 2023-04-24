@@ -1,0 +1,50 @@
+<h1 class="unselectable" *ngIf="isLoading === true">Loading...</h1>
+
+<button mat-fab style="position: fixed; bottom: 25px; right: 25px; z-index: 100;" color="primary" [disabled]="isLoading" (click)="refresh()">
+    <mat-icon>refresh</mat-icon>
+</button>
+
+<mat-card *ngIf="isLoading === false">
+    
+    <mat-card-header>
+        <mat-card-title>
+            <h1>{{file.id}}</h1>
+        </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+        <p>
+            <b>Filename:</b> {{file.filename}}<br>
+            <b>Status:</b> {{file.status}}<br>
+            <b>Size:</b> {{file.bytes | number}} bytes<br>
+            <b>Purpose:</b> {{file.purpose}}<br>
+            <b>Created at:</b> {{file.created_at * 1000 | date:'medium'}}
+        </p>
+    </mat-card-content>
+
+    <mat-card-actions style="display: flex; gap: 20">
+        <button mat-button color="warn" (click)="delete()"><mat-icon>delete</mat-icon> Delete</button>
+    </mat-card-actions>
+</mat-card>
+
+<mat-card *ngIf="isLoading === false">
+    <mat-card-header>
+        <mat-card-title>
+            <h1>Content</h1>
+        </mat-card-title>
+    </mat-card-header>
+
+    <ng-container *ngIf="fileContent">
+        <mat-card-actions style="display: flex; gap: 20">
+            <button mat-button color="primary" (click)="save('json')"><mat-icon>save</mat-icon> JSON</button>
+            <button mat-button color="primary" (click)="save('jsonl')"><mat-icon>save</mat-icon> JSONL</button>
+            <button mat-button color="primary" (click)="save('csv')"><mat-icon>save</mat-icon> CSV</button>
+            <button mat-button color="primary" (click)="save('txt')"><mat-icon>save</mat-icon> TXT</button>
+        </mat-card-actions>
+
+        <mat-card-content>
+            <pre><code class="language-json" style="display: block; overflow: auto;">{{fileContent}}</code></pre>
+        </mat-card-content>
+    </ng-container>
+
+</mat-card>
