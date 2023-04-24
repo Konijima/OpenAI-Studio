@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as url from 'url';
 
 // Import core modules
+import './Core/logger';
 import './Core/file-system';
 import './Core/openai';
 
